@@ -101,26 +101,28 @@
         function atualizarGrafico() {
             const ctx = document.getElementById('grafico').getContext('2d');
 
-            // Agrupar os gastos por dia (baseado na data)
-            const gastosPorDia = {};
+            // Agrupar os gastos por dia
+            const gastosPorDia = Array(diarias).fill(0); // Inicializar com 0 para cada dia
+            const dias = [];
+
             gastos.forEach(gasto => {
-                const dia = new Date(gasto.data).toLocaleDateString();
-                if (!gastosPorDia[dia]) {
-                    gastosPorDia[dia] = 0;
+                const dia = new Date(gasto.data).getDate(); // Obter o dia do mês (1 a 31)
+                if (dia <= diarias) {
+                    gastosPorDia[dia - 1] += gasto.valor;
                 }
-                gastosPorDia[dia] += gasto.valor; // Acumulando os valores por dia
             });
 
-            const labels = Object.keys(gastosPorDia); // Dias (data formatada)
-            const gastosDiarios = Object.values(gastosPorDia); // Valores gastos
-            const mediaDiaria = Array(diarias).fill(orcamentoDiario); // Linha média
+            // Definir os dias no gráfico (1 a N dias)
+            for (let i = 1; i <= diarias; i++) {
+                dias.push(`Dia ${i}`);
+            }
 
             const data = {
-                labels: labels,
+                labels: dias, // Dias de viagem (1 a N)
                 datasets: [
                     {
                         label: 'Valor Gasto',
-                        data: gastosDiarios,
+                        data: gastosPorDia,
                         backgroundColor: 'rgba(54, 162, 235, 0.6)',
                         borderColor: 'rgba(54, 162, 235, 1)',
                         borderWidth: 1,
@@ -128,7 +130,7 @@
                     },
                     {
                         label: 'Orçamento Diário',
-                        data: mediaDiaria,
+                        data: Array(diarias).fill(orcamentoDiario),
                         borderColor: 'rgba(255, 99, 132, 1)',
                         borderWidth: 2,
                         borderDash: [5, 5],
@@ -147,7 +149,7 @@
                             beginAtZero: true,
                             ticks: {
                                 autoSkip: true,
-                                maxTicksLimit: 10
+                                maxTicksLimit: diarias
                             }
                         },
                         y: {
