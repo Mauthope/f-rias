@@ -100,9 +100,20 @@
         // Função para atualizar o gráfico
         function atualizarGrafico() {
             const ctx = document.getElementById('grafico').getContext('2d');
-            const labels = gastos.map(gasto => `Dia ${new Date(gasto.data).toLocaleDateString()}`);
-            const gastosDiarios = gastos.map(gasto => gasto.valor);
-            const mediaDiaria = Array(diarias).fill(orcamentoDiario);
+
+            // Agrupar os gastos por dia (baseado na data)
+            const gastosPorDia = {};
+            gastos.forEach(gasto => {
+                const dia = new Date(gasto.data).toLocaleDateString();
+                if (!gastosPorDia[dia]) {
+                    gastosPorDia[dia] = 0;
+                }
+                gastosPorDia[dia] += gasto.valor; // Acumulando os valores por dia
+            });
+
+            const labels = Object.keys(gastosPorDia); // Dias (data formatada)
+            const gastosDiarios = Object.values(gastosPorDia); // Valores gastos
+            const mediaDiaria = Array(diarias).fill(orcamentoDiario); // Linha média
 
             const data = {
                 labels: labels,
@@ -127,13 +138,17 @@
             };
 
             new Chart(ctx, {
-                type: 'line',
+                type: 'bar', // Usar gráfico de barras
                 data: data,
                 options: {
                     responsive: true,
                     scales: {
                         x: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            ticks: {
+                                autoSkip: true,
+                                maxTicksLimit: 10
+                            }
                         },
                         y: {
                             beginAtZero: true
