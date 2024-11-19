@@ -49,6 +49,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            margin-top: 10px;
         }
 
         button:hover {
@@ -63,9 +64,6 @@
 <body>
     <h1>Controle de Orçamento de Viagem</h1>
     <div class="container">
-        <label for="daily-budget">Orçamento Diário (R$):</label>
-        <input type="number" id="daily-budget" placeholder="Digite o orçamento diário">
-
         <label for="current-date">Data Atual:</label>
         <input type="text" id="current-date" readonly>
 
@@ -73,18 +71,20 @@
         <input type="number" id="expense-value" placeholder="Digite o valor gasto">
 
         <button id="add-expense">Adicionar Gasto</button>
+        <button id="clear-data">Limpar Dados</button>
         <canvas id="budget-chart"></canvas>
     </div>
 
     <script>
         // Elementos do DOM
-        const dailyBudgetInput = document.getElementById('daily-budget');
         const currentDateInput = document.getElementById('current-date');
         const expenseValueInput = document.getElementById('expense-value');
         const addExpenseButton = document.getElementById('add-expense');
+        const clearDataButton = document.getElementById('clear-data');
         const budgetChartCanvas = document.getElementById('budget-chart');
 
         // Configuração inicial
+        const dailyBudget = 250; // Orçamento diário fixo
         const today = new Date().toISOString().slice(0, 10);
         currentDateInput.value = today;
 
@@ -95,7 +95,6 @@
         function updateChart() {
             const dates = Object.keys(data);
             const expenses = dates.map(date => data[date].reduce((a, b) => a + b, 0));
-            const dailyBudget = parseFloat(dailyBudgetInput.value) || 0;
 
             // Destrói o gráfico anterior, se existir
             if (budgetChart) {
@@ -122,6 +121,7 @@
                             borderColor: 'rgba(255, 99, 132, 1)',
                             borderWidth: 2,
                             pointRadius: 0,
+                            borderDash: [5, 5], // Linha tracejada
                         },
                     ],
                 },
@@ -148,6 +148,13 @@
             localStorage.setItem('budgetData', JSON.stringify(data));
 
             expenseValueInput.value = '';
+            updateChart();
+        });
+
+        // Limpa os dados do localStorage
+        clearDataButton.addEventListener('click', () => {
+            localStorage.removeItem('budgetData');
+            Object.keys(data).forEach(key => delete data[key]); // Limpa o objeto em memória
             updateChart();
         });
 
