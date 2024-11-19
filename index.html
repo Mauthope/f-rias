@@ -121,8 +121,7 @@
                         data: valoresGastos,
                         backgroundColor: 'rgba(54, 162, 235, 0.6)',
                         borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1,
-                        fill: true
+                        borderWidth: 1
                     },
                     {
                         label: 'Orçamento Diário',
@@ -136,7 +135,7 @@
             };
 
             new Chart(ctx, {
-                type: 'line',
+                type: 'bar',  // Altera o tipo do gráfico para barra
                 data: data,
                 options: {
                     responsive: true,
