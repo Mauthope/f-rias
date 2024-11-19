@@ -127,9 +127,24 @@
                 },
                 options: {
                     responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                    },
                     scales: {
                         y: {
                             beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Valores (R$)',
+                            },
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Datas',
+                            },
                         },
                     },
                 },
