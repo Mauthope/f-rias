@@ -12,181 +12,140 @@
             padding: 20px;
             background-color: #f4f4f9;
         }
+
         h1 {
             text-align: center;
-            color: #333;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        .form-group {
             margin-bottom: 20px;
         }
-        label {
-            font-weight: bold;
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        input[type="number"], input[type="text"] {
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
             width: 100%;
             padding: 10px;
-            margin-top: 5px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-            font-size: 16px;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #007bff;
+            background: #007BFF;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
         }
+
         button:hover {
-            background-color: #0056b3;
+            background: #0056b3;
         }
-        .chart-container {
-            margin-top: 40px;
-        }
-        .clear-btn {
-            background-color: #dc3545;
-        }
-        .clear-btn:hover {
-            background-color: #c82333;
+
+        canvas {
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-
-<div class="container">
     <h1>Controle de Orçamento de Viagem</h1>
-    <div class="form-group">
-        <label for="diarias">Número de Diárias</label>
-        <input type="number" id="diarias" placeholder="Exemplo: 5" />
+    <div class="container">
+        <label for="daily-budget">Orçamento Diário (R$):</label>
+        <input type="number" id="daily-budget" placeholder="Digite o orçamento diário">
+
+        <label for="current-date">Data Atual:</label>
+        <input type="text" id="current-date" readonly>
+
+        <label for="expense-value">Valores Gastos (R$):</label>
+        <input type="number" id="expense-value" placeholder="Digite o valor gasto">
+
+        <button id="add-expense">Adicionar Gasto</button>
+        <canvas id="budget-chart"></canvas>
     </div>
-    <div class="form-group">
-        <label for="orcamento-diario">Orçamento Diário</label>
-        <input type="number" id="orcamento-diario" placeholder="Exemplo: 150" />
-    </div>
-    <div class="form-group">
-        <label for="valor-gasto">Valor Gasto no Dia</label>
-        <input type="number" id="valor-gasto" placeholder="Exemplo: 100" />
-        <button id="adicionar-gasto">Adicionar Gasto</button>
-    </div>
 
-    <button class="clear-btn" id="limpar-registros">Limpar Registros</button>
+    <script>
+        // Elementos do DOM
+        const dailyBudgetInput = document.getElementById('daily-budget');
+        const currentDateInput = document.getElementById('current-date');
+        const expenseValueInput = document.getElementById('expense-value');
+        const addExpenseButton = document.getElementById('add-expense');
+        const budgetChartCanvas = document.getElementById('budget-chart');
 
-    <div class="chart-container">
-        <canvas id="grafico"></canvas>
-    </div>
-</div>
+        // Configuração inicial
+        const today = new Date().toISOString().slice(0, 10);
+        currentDateInput.value = today;
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // Carregar dados do localStorage
-        const diarias = JSON.parse(localStorage.getItem('diarias')) || 0;
-        const orcamentoDiario = JSON.parse(localStorage.getItem('orcamentoDiario')) || 0;
-        const gastos = JSON.parse(localStorage.getItem('gastos')) || {};
+        const data = JSON.parse(localStorage.getItem('budgetData')) || {};
 
-        // Preencher campos com os dados salvos
-        document.getElementById('diarias').value = diarias;
-        document.getElementById('orcamento-diario').value = orcamentoDiario;
+        // Atualiza o gráfico
+        function updateChart() {
+            const dates = Object.keys(data);
+            const expenses = dates.map(date => data[date].reduce((a, b) => a + b, 0));
+            const dailyBudget = parseFloat(dailyBudgetInput.value) || 0;
 
-        // Função para atualizar o gráfico
-        function atualizarGrafico() {
-            const ctx = document.getElementById('grafico').getContext('2d');
-
-            // Criar um array de dias
-            const dias = [];
-            const valoresGastos = [];
-            for (let i = 1; i <= diarias; i++) {
-                const dataDia = `Dia ${i}`;
-                dias.push(dataDia);
-                // Somar todos os gastos para o dia
-                valoresGastos.push(gastos[dataDia] || 0);
-            }
-
-            const mediaDiaria = Array(diarias).fill(orcamentoDiario);
-
-            const data = {
-                labels: dias,
-                datasets: [
-                    {
-                        label: 'Valor Gasto',
-                        data: valoresGastos,
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Orçamento Diário',
-                        data: mediaDiaria,
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        fill: false
-                    }
-                ]
-            };
-
-            new Chart(ctx, {
-                type: 'bar',  // Altera o tipo do gráfico para barra
-                data: data,
+            new Chart(budgetChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'Total Gasto (R$)',
+                            data: expenses,
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1,
+                        },
+                        {
+                            label: 'Orçamento Diário (R$)',
+                            data: Array(dates.length).fill(dailyBudget),
+                            type: 'line',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                        },
+                    ],
+                },
                 options: {
                     responsive: true,
                     scales: {
-                        x: {
-                            beginAtZero: true
-                        },
                         y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
+                            beginAtZero: true,
+                        },
+                    },
+                },
             });
         }
 
-        // Função para adicionar gasto
-        document.getElementById('adicionar-gasto').addEventListener('click', () => {
-            const gasto = parseFloat(document.getElementById('valor-gasto').value);
-            const diaAtual = `Dia ${new Date().getDate()}`;  // Pega o "Dia X" baseado no dia do mês atual
-            if (gasto && gasto > 0) {
-                // Acumula os gastos do dia
-                gastos[diaAtual] = (gastos[diaAtual] || 0) + gasto;
-                localStorage.setItem('gastos', JSON.stringify(gastos));
-                document.getElementById('valor-gasto').value = '';  // Limpa o campo de valor gasto
-                atualizarGrafico();
+        // Adiciona gastos
+        addExpenseButton.addEventListener('click', () => {
+            const expenseValue = parseFloat(expenseValueInput.value);
+            if (!expenseValue) return;
+
+            if (!data[today]) {
+                data[today] = [];
             }
+            data[today].push(expenseValue);
+            localStorage.setItem('budgetData', JSON.stringify(data));
+
+            expenseValueInput.value = '';
+            updateChart();
         });
 
-        // Função para limpar o localStorage
-        document.getElementById('limpar-registros').addEventListener('click', () => {
-            localStorage.clear();
-            location.reload();
-        });
-
-        // Atualizar gráfico na inicialização
-        atualizarGrafico();
-
-        // Função para salvar os dados
-        document.getElementById('diarias').addEventListener('input', () => {
-            const diariasValue = parseInt(document.getElementById('diarias').value, 10);
-            localStorage.setItem('diarias', JSON.stringify(diariasValue));
-            atualizarGrafico();
-        });
-
-        document.getElementById('orcamento-diario').addEventListener('input', () => {
-            const orcamentoValue = parseFloat(document.getElementById('orcamento-diario').value);
-            localStorage.setItem('orcamentoDiario', JSON.stringify(orcamentoValue));
-            atualizarGrafico();
-        });
-    });
-</script>
-
+        // Atualiza o gráfico ao carregar
+        updateChart();
+    </script>
 </body>
 </html>
