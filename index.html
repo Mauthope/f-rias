@@ -32,7 +32,7 @@
             margin-bottom: 5px;
         }
 
-        input[type="number"] {
+        input[type="number"], input[type="text"] {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
@@ -89,6 +89,7 @@
         currentDateInput.value = today;
 
         const data = JSON.parse(localStorage.getItem('budgetData')) || {};
+        let budgetChart; // Referência ao gráfico atual
 
         // Atualiza o gráfico
         function updateChart() {
@@ -96,7 +97,13 @@
             const expenses = dates.map(date => data[date].reduce((a, b) => a + b, 0));
             const dailyBudget = parseFloat(dailyBudgetInput.value) || 0;
 
-            new Chart(budgetChartCanvas, {
+            // Destrói o gráfico anterior, se existir
+            if (budgetChart) {
+                budgetChart.destroy();
+            }
+
+            // Cria um novo gráfico
+            budgetChart = new Chart(budgetChartCanvas, {
                 type: 'bar',
                 data: {
                     labels: dates,
