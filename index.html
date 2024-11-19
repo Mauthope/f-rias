@@ -91,7 +91,7 @@
         // Carregar dados do localStorage
         const diarias = JSON.parse(localStorage.getItem('diarias')) || 0;
         const orcamentoDiario = JSON.parse(localStorage.getItem('orcamentoDiario')) || 0;
-        const gastos = JSON.parse(localStorage.getItem('gastos')) || [];
+        const gastos = JSON.parse(localStorage.getItem('gastos')) || {};
 
         // Preencher campos com os dados salvos
         document.getElementById('diarias').value = diarias;
@@ -101,28 +101,24 @@
         function atualizarGrafico() {
             const ctx = document.getElementById('grafico').getContext('2d');
 
-            // Agrupar os gastos por dia
-            const gastosPorDia = Array(diarias).fill(0); // Inicializar com 0 para cada dia
+            // Criar um array de dias
             const dias = [];
-
-            gastos.forEach(gasto => {
-                const dia = new Date(gasto.data).getDate(); // Obter o dia do mês (1 a 31)
-                if (dia <= diarias) {
-                    gastosPorDia[dia - 1] += gasto.valor;
-                }
-            });
-
-            // Definir os dias no gráfico (1 a N dias)
+            const valoresGastos = [];
             for (let i = 1; i <= diarias; i++) {
-                dias.push(`Dia ${i}`);
+                const dataDia = `Dia ${i}`;
+                dias.push(dataDia);
+                // Somar todos os gastos para o dia
+                valoresGastos.push(gastos[dataDia] || 0);
             }
 
+            const mediaDiaria = Array(diarias).fill(orcamentoDiario);
+
             const data = {
-                labels: dias, // Dias de viagem (1 a N)
+                labels: dias,
                 datasets: [
                     {
                         label: 'Valor Gasto',
-                        data: gastosPorDia,
+                        data: valoresGastos,
                         backgroundColor: 'rgba(54, 162, 235, 0.6)',
                         borderColor: 'rgba(54, 162, 235, 1)',
                         borderWidth: 1,
@@ -130,7 +126,7 @@
                     },
                     {
                         label: 'Orçamento Diário',
-                        data: Array(diarias).fill(orcamentoDiario), // Valor fixo para cada dia
+                        data: mediaDiaria,
                         borderColor: 'rgba(255, 99, 132, 1)',
                         borderWidth: 2,
                         borderDash: [5, 5],
@@ -140,17 +136,13 @@
             };
 
             new Chart(ctx, {
-                type: 'bar', // Usar gráfico de barras
+                type: 'line',
                 data: data,
                 options: {
                     responsive: true,
                     scales: {
                         x: {
-                            beginAtZero: true,
-                            ticks: {
-                                autoSkip: true,
-                                maxTicksLimit: diarias
-                            }
+                            beginAtZero: true
                         },
                         y: {
                             beginAtZero: true
@@ -163,11 +155,12 @@
         // Função para adicionar gasto
         document.getElementById('adicionar-gasto').addEventListener('click', () => {
             const gasto = parseFloat(document.getElementById('valor-gasto').value);
+            const diaAtual = `Dia ${new Date().getDate()}`;  // Pega o "Dia X" baseado no dia do mês atual
             if (gasto && gasto > 0) {
-                const dataAtual = new Date().toISOString();
-                gastos.push({ valor: gasto, data: dataAtual });
+                // Acumula os gastos do dia
+                gastos[diaAtual] = (gastos[diaAtual] || 0) + gasto;
                 localStorage.setItem('gastos', JSON.stringify(gastos));
-                document.getElementById('valor-gasto').value = '';
+                document.getElementById('valor-gasto').value = '';  // Limpa o campo de valor gasto
                 atualizarGrafico();
             }
         });
