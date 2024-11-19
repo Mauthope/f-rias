@@ -53,6 +53,12 @@
         .chart-container {
             margin-top: 40px;
         }
+        .clear-btn {
+            background-color: #dc3545;
+        }
+        .clear-btn:hover {
+            background-color: #c82333;
+        }
     </style>
 </head>
 <body>
@@ -73,6 +79,8 @@
         <button id="adicionar-gasto">Adicionar Gasto</button>
     </div>
 
+    <button class="clear-btn" id="limpar-registros">Limpar Registros</button>
+
     <div class="chart-container">
         <canvas id="grafico"></canvas>
     </div>
@@ -92,8 +100,8 @@
         // Função para atualizar o gráfico
         function atualizarGrafico() {
             const ctx = document.getElementById('grafico').getContext('2d');
-            const labels = Array.from({ length: diarias }, (_, index) => `Dia ${index + 1}`);
-            const gastosDiarios = gastos.slice(0, diarias);
+            const labels = gastos.map(gasto => `Dia ${new Date(gasto.data).toLocaleDateString()}`);
+            const gastosDiarios = gastos.map(gasto => gasto.valor);
             const mediaDiaria = Array(diarias).fill(orcamentoDiario);
 
             const data = {
@@ -139,11 +147,18 @@
         document.getElementById('adicionar-gasto').addEventListener('click', () => {
             const gasto = parseFloat(document.getElementById('valor-gasto').value);
             if (gasto && gasto > 0) {
-                gastos.push(gasto);
+                const dataAtual = new Date().toISOString();
+                gastos.push({ valor: gasto, data: dataAtual });
                 localStorage.setItem('gastos', JSON.stringify(gastos));
                 document.getElementById('valor-gasto').value = '';
                 atualizarGrafico();
             }
+        });
+
+        // Função para limpar o localStorage
+        document.getElementById('limpar-registros').addEventListener('click', () => {
+            localStorage.clear();
+            location.reload();
         });
 
         // Atualizar gráfico na inicialização
