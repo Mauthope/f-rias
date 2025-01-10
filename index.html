@@ -62,6 +62,8 @@
             canvas.height = video.videoHeight;
             const src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
             const gray = new cv.Mat();
+            const blurred = new cv.Mat();
+            const edges = new cv.Mat();
             const contours = new cv.MatVector();
             const hierarchy = new cv.Mat();
 
@@ -69,6 +71,8 @@
                 if (video.paused || video.ended) {
                     src.delete();
                     gray.delete();
+                    blurred.delete();
+                    edges.delete();
                     contours.delete();
                     hierarchy.delete();
                     return;
@@ -76,9 +80,18 @@
 
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 src.data.set(ctx.getImageData(0, 0, canvas.width, canvas.height).data);
+
+                // Convert to grayscale
                 cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-                cv.threshold(gray, gray, 100, 255, cv.THRESH_BINARY);
-                cv.findContours(gray, contours, hierarchy, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE);
+
+                // Apply Gaussian blur to reduce noise
+                cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+
+                // Use Canny edge detection
+                cv.Canny(blurred, edges, 100, 200);
+
+                // Find contours
+                cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
                 let shapesDetected = 0;
 
