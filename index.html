@@ -90,13 +90,13 @@
                     cv.absdiff(gray, previousFrame, diffFrame);
 
                     // Apply Gaussian blur to reduce noise
-                    cv.GaussianBlur(diffFrame, blurred, new cv.Size(5, 5), 0);
+                    cv.GaussianBlur(diffFrame, blurred, new cv.Size(3, 3), 0); // Ajustado para maior sensibilidade
 
                     // Apply threshold to identify significant changes
-                    cv.threshold(blurred, threshold, 25, 255, cv.THRESH_BINARY);
+                    cv.threshold(blurred, threshold, 15, 255, cv.THRESH_BINARY); // Valor ajustado para maior sensibilidade
 
                     // Count non-zero pixels (indicates motion)
-                    const motionDetected = cv.countNonZero(threshold) > 1000; // Adjust threshold for sensitivity
+                    const motionDetected = cv.countNonZero(threshold) > 500; // Reduzido para detectar menos pixels
 
                     if (motionDetected) {
                         const now = new Date();
@@ -122,3 +122,4 @@
     </script>
 </body>
 </html>
+
