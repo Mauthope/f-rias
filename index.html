@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detecção de Movimento</title>
+    <title>Motion Detection</title>
     <script src="https://docs.opencv.org/4.x/opencv.js" defer></script>
     <style>
         body {
@@ -30,15 +30,15 @@
     </style>
 </head>
 <body>
-    <h1>Detecção de Movimento</h1>
+    <h1>Motion Detection</h1>
     <video id="video" autoplay playsinline></video>
-    <canvas id="canvas" style="display: none;"></canvas>
+    <canvas id="canvas"></canvas>
     <table>
         <thead>
             <tr>
-                <th>Data</th>
-                <th>Hora</th>
-                <th>Evento</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody id="log"></tbody>
@@ -50,79 +50,69 @@
         const ctx = canvas.getContext('2d');
         const log = document.getElementById('log');
 
-        // Solicita acesso à câmera
         navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
             .then(stream => {
                 video.srcObject = stream;
             })
-            .catch(err => console.error('Erro ao acessar a câmera:', err));
+            .catch(err => console.error('Camera access error:', err));
 
         video.addEventListener('play', () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
 
-            const src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+            const currentFrame = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+            const previousFrame = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+            const diffFrame = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC1);
             const gray = new cv.Mat();
-            const prevGray = new cv.Mat();
-            const diff = new cv.Mat();
-            const thresh = new cv.Mat();
-
-            let firstFrame = true;
-            const movimentoThreshold = 5000; // Ajuste conforme necessário
+            const blurred = new cv.Mat();
+            const threshold = new cv.Mat();
 
             function processFrame() {
                 if (video.paused || video.ended) {
-                    src.delete();
+                    currentFrame.delete();
+                    previousFrame.delete();
+                    diffFrame.delete();
                     gray.delete();
-                    prevGray.delete();
-                    diff.delete();
-                    thresh.delete();
+                    blurred.delete();
+                    threshold.delete();
                     return;
                 }
 
-                // Captura o frame atual
+                // Capture current frame
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                src.data.set(imageData.data);
+                currentFrame.data.set(ctx.getImageData(0, 0, canvas.width, canvas.height).data);
 
-                // Converte para escala de cinza
-                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                // Convert to grayscale
+                cv.cvtColor(currentFrame, gray, cv.COLOR_RGBA2GRAY);
 
-                if (firstFrame) {
-                    gray.copyTo(prevGray);
-                    firstFrame = false;
-                    requestAnimationFrame(processFrame);
-                    return;
+                if (!previousFrame.empty()) {
+                    // Compute absolute difference between current and previous frame
+                    cv.absdiff(gray, previousFrame, diffFrame);
+
+                    // Apply Gaussian blur to reduce noise
+                    cv.GaussianBlur(diffFrame, blurred, new cv.Size(5, 5), 0);
+
+                    // Apply threshold to identify significant changes
+                    cv.threshold(blurred, threshold, 25, 255, cv.THRESH_BINARY);
+
+                    // Count non-zero pixels (indicates motion)
+                    const motionDetected = cv.countNonZero(threshold) > 1000; // Adjust threshold for sensitivity
+
+                    if (motionDetected) {
+                        const now = new Date();
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${now.toLocaleDateString()}</td>
+                            <td>${now.toLocaleTimeString()}</td>
+                            <td>Motion Detected</td>
+                        `;
+                        log.appendChild(row);
+                        console.log('Motion detected');
+                    }
                 }
 
-                // Calcula a diferença absoluta entre o frame atual e o anterior
-                cv.absdiff(gray, prevGray, diff);
-
-                // Aplica um limiar para destacar as áreas de movimento
-                cv.threshold(diff, thresh, 25, 255, cv.THRESH_BINARY);
-
-                // Aplica dilatação para preencher buracos nas áreas detectadas
-                let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
-                cv.dilate(thresh, thresh, kernel, new cv.Point(-1, -1), 2, cv.BORDER_CONSTANT, cv.morphologyDefaultBorderValue());
-
-                // Conta o número de pixels em movimento
-                const movimento = cv.countNonZero(thresh);
-                console.log(`Pixels em movimento: ${movimento}`);
-
-                // Define se houve movimento com base no threshold
-                if (movimento > movimentoThreshold) {
-                    const now = new Date();
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${now.toLocaleDateString()}</td>
-                        <td>${now.toLocaleTimeString()}</td>
-                        <td>Movimento Detectado</td>
-                    `;
-                    log.appendChild(row);
-                }
-
-                // Atualiza o frame anterior
-                gray.copyTo(prevGray);
+                // Update previous frame
+                gray.copyTo(previousFrame);
 
                 requestAnimationFrame(processFrame);
             }
