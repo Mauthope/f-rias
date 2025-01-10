@@ -107,6 +107,8 @@
                     approx.delete();
                 }
 
+                console.log(`Shapes detected in this frame: ${shapesDetected}`);  // Log detection count
+
                 if (shapesDetected > 0) {
                     const now = new Date();
                     const row = document.createElement('tr');
@@ -117,6 +119,7 @@
                         <td>${shapesDetected}</td>
                     `;
                     log.appendChild(row);
+                    console.log('Shape added to the table');  // Log table update
                 }
 
                 requestAnimationFrame(processFrame);
