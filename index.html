@@ -1,189 +1,132 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Orçamento de Viagem</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Shape Recognition</title>
+    <script src="https://docs.opencv.org/4.x/opencv.js" defer></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f4f9;
-        }
-
-        h1 {
             text-align: center;
-            margin-bottom: 20px;
         }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        video, canvas {
+            max-width: 100%;
+            margin: 10px auto;
         }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
+        table {
+            margin: 10px auto;
+            border-collapse: collapse;
+            width: 80%;
         }
-
-        input[type="number"], input[type="text"] {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
+        th, td {
             border: 1px solid #ddd;
-            border-radius: 4px;
+            padding: 8px;
+            text-align: center;
         }
-
-        button {
-            width: 100%;
-            padding: 10px;
-            background: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 10px;
-        }
-
-        button:hover {
-            background: #0056b3;
-        }
-
-        canvas {
-            margin-top: 20px;
+        th {
+            background-color: #f4f4f4;
         }
     </style>
 </head>
 <body>
-    <h1>Controle de Orçamento de Viagem</h1>
-    <div class="container">
-        <label for="current-date">Data Atual:</label>
-        <input type="text" id="current-date" readonly>
-
-        <label for="expense-value">Valores Gastos (R$):</label>
-        <input type="number" id="expense-value" placeholder="Digite o valor gasto">
-
-        <button id="add-expense">Adicionar Gasto</button>
-        <button id="clear-data">Limpar Dados</button>
-        <canvas id="budget-chart"></canvas>
-    </div>
+    <h1>Rectangle and Square Recognition</h1>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Shape</th>
+                <th>Count</th>
+            </tr>
+        </thead>
+        <tbody id="log"></tbody>
+    </table>
 
     <script>
-        // Elementos do DOM
-        const currentDateInput = document.getElementById('current-date');
-        const expenseValueInput = document.getElementById('expense-value');
-        const addExpenseButton = document.getElementById('add-expense');
-        const clearDataButton = document.getElementById('clear-data');
-        const budgetChartCanvas = document.getElementById('budget-chart');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const log = document.getElementById('log');
 
-        // Configuração inicial
-        const dailyBudget = 250; // Orçamento diário fixo
-        const today = new Date().toISOString().slice(0, 10);
-        currentDateInput.value = today;
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => console.error('Camera access error:', err));
 
-        const data = JSON.parse(localStorage.getItem('budgetData')) || {};
-        let budgetChart; // Referência ao gráfico atual
+        video.addEventListener('play', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const src = new cv.Mat(video.videoHeight, video.videoWidth, cv.CV_8UC4);
+            const gray = new cv.Mat();
+            const contours = new cv.MatVector();
+            const hierarchy = new cv.Mat();
 
-        // Plugin para desenhar uma linha horizontal
-        const horizontalLinePlugin = {
-            id: 'horizontalLine',
-            beforeDraw(chart) {
-                const { ctx, chartArea: { top, right, bottom, left }, scales: { y } } = chart;
-                ctx.save();
-                ctx.strokeStyle = 'red';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(left, y.getPixelForValue(dailyBudget));
-                ctx.lineTo(right, y.getPixelForValue(dailyBudget));
-                ctx.stroke();
-                ctx.restore();
+            function processFrame() {
+                if (video.paused || video.ended) {
+                    src.delete();
+                    gray.delete();
+                    contours.delete();
+                    hierarchy.delete();
+                    return;
+                }
+
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                src.data.set(ctx.getImageData(0, 0, canvas.width, canvas.height).data);
+                cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+                cv.threshold(gray, gray, 127, 255, cv.THRESH_BINARY);
+                cv.findContours(gray, contours, hierarchy, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE);
+
+                let squares = 0;
+                let rectangles = 0;
+
+                for (let i = 0; i < contours.size(); i++) {
+                    const contour = contours.get(i);
+                    const approx = new cv.Mat();
+                    cv.approxPolyDP(contour, approx, 0.02 * cv.arcLength(contour, true), true);
+
+                    if (approx.rows === 4) {
+                        const vertices = [];
+                        for (let j = 0; j < 4; j++) {
+                            vertices.push({
+                                x: approx.intAt(j, 0),
+                                y: approx.intAt(j, 1)
+                            });
+                        }
+
+                        const d1 = Math.hypot(vertices[0].x - vertices[1].x, vertices[0].y - vertices[1].y);
+                        const d2 = Math.hypot(vertices[1].x - vertices[2].x, vertices[1].y - vertices[2].y);
+
+                        if (Math.abs(d1 - d2) < 10) {
+                            squares++;
+                        } else {
+                            rectangles++;
+                        }
+                    }
+
+                    approx.delete();
+                }
+
+                if (squares > 0 || rectangles > 0) {
+                    const now = new Date();
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${now.toLocaleDateString()}</td>
+                        <td>${now.toLocaleTimeString()}</td>
+                        <td>${squares > 0 ? 'Square' : 'Rectangle'}</td>
+                        <td>${squares + rectangles}</td>
+                    `;
+                    log.appendChild(row);
+                }
+
+                requestAnimationFrame(processFrame);
             }
-        };
 
-        // Atualiza o gráfico
-        function updateChart() {
-            const dates = Object.keys(data);
-            const expenses = dates.map(date => data[date].reduce((a, b) => a + b, 0));
-
-            // Destrói o gráfico anterior, se existir
-            if (budgetChart) {
-                budgetChart.destroy();
-            }
-
-            // Cria um novo gráfico
-            budgetChart = new Chart(budgetChartCanvas, {
-                type: 'bar',
-                data: {
-                    labels: dates,
-                    datasets: [
-                        {
-                            label: 'Total Gasto (R$)',
-                            data: expenses,
-                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1,
-                        },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 300, // Limite máximo do eixo Y
-                            title: {
-                                display: true,
-                                text: 'Valores (R$)',
-                            },
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Datas',
-                            },
-                        },
-                    },
-                },
-                plugins: [horizontalLinePlugin],
-            });
-        }
-
-        // Adiciona gastos
-        addExpenseButton.addEventListener('click', () => {
-            const expenseValue = parseFloat(expenseValueInput.value);
-            if (!expenseValue) return;
-
-            if (!data[today]) {
-                data[today] = [];
-            }
-            data[today].push(expenseValue);
-            localStorage.setItem('budgetData', JSON.stringify(data));
-
-            expenseValueInput.value = '';
-            updateChart();
+            processFrame();
         });
-
-        // Limpa os dados do localStorage
-        clearDataButton.addEventListener('click', () => {
-            localStorage.removeItem('budgetData');
-            Object.keys(data).forEach(key => delete data[key]); // Limpa o objeto em memória
-            updateChart();
-        });
-
-        // Atualiza o gráfico ao carregar
-        updateChart();
     </script>
 </body>
 </html>
