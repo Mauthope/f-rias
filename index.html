@@ -39,9 +39,7 @@
   <table>
     <thead>
       <tr>
-        <th>Start Time</th>
-        <th>End Time</th>
-        <th>Duration (seconds)</th>
+        <th>Detection Time</th>
       </tr>
     </thead>
     <tbody id="motion-log"></tbody>
@@ -54,7 +52,6 @@
     const motionLog = document.getElementById('motion-log');
 
     let previousFrame = null;
-    let motionStartTime = null;
     let isInMotion = false;
 
     async function startCamera() {
@@ -83,9 +80,9 @@
           const diff = Math.abs(currentFrame.data[i] - previousFrame.data[i]) +
                        Math.abs(currentFrame.data[i + 1] - previousFrame.data[i + 1]) +
                        Math.abs(currentFrame.data[i + 2] - previousFrame.data[i + 2]);
-          if (diff > 150) { // Further increased sensitivity threshold
+          if (diff > 150) {
             significantChanges++;
-            if (significantChanges > 20000) { // Higher minimum number of changes to consider as motion
+            if (significantChanges > 20000) {
               motionDetected = true;
               break;
             }
@@ -95,18 +92,13 @@
         const now = new Date();
         if (motionDetected) {
           if (!isInMotion) {
-            motionStartTime = now;
+            const detectionTime = now.toLocaleTimeString();
+            const row = `<tr><td>${detectionTime}</td></tr>`;
+            motionLog.insertAdjacentHTML('beforeend', row);
             isInMotion = true;
           }
         } else {
-          if (isInMotion) {
-            const motionEndTime = now;
-            const duration = ((motionEndTime - motionStartTime) / 1000).toFixed(2);
-            const row = `<tr><td>${motionStartTime.toLocaleTimeString()}</td><td>${motionEndTime.toLocaleTimeString()}</td><td>${duration}</td></tr>`;
-            motionLog.insertAdjacentHTML('beforeend', row);
-            isInMotion = false;
-            motionStartTime = null;
-          }
+          isInMotion = false;
         }
       }
 
