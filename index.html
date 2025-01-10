@@ -83,9 +83,9 @@
           const diff = Math.abs(currentFrame.data[i] - previousFrame.data[i]) +
                        Math.abs(currentFrame.data[i + 1] - previousFrame.data[i + 1]) +
                        Math.abs(currentFrame.data[i + 2] - previousFrame.data[i + 2]);
-          if (diff > 100) { // Increased sensitivity threshold
+          if (diff > 150) { // Further increased sensitivity threshold
             significantChanges++;
-            if (significantChanges > 5000) { // Minimum number of changes to consider as motion
+            if (significantChanges > 20000) { // Higher minimum number of changes to consider as motion
               motionDetected = true;
               break;
             }
