@@ -80,8 +80,7 @@
                 cv.threshold(gray, gray, 100, 255, cv.THRESH_BINARY);
                 cv.findContours(gray, contours, hierarchy, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE);
 
-                let squares = 0;
-                let rectangles = 0;
+                let shapesDetected = 0;
 
                 for (let i = 0; i < contours.size(); i++) {
                     const contour = contours.get(i);
@@ -89,35 +88,20 @@
                     cv.approxPolyDP(contour, approx, 0.02 * cv.arcLength(contour, true), true);
 
                     if (approx.rows === 4) {
-                        const vertices = [];
-                        for (let j = 0; j < 4; j++) {
-                            vertices.push({
-                                x: approx.intAt(j, 0),
-                                y: approx.intAt(j, 1)
-                            });
-                        }
-
-                        const d1 = Math.hypot(vertices[0].x - vertices[1].x, vertices[0].y - vertices[1].y);
-                        const d2 = Math.hypot(vertices[1].x - vertices[2].x, vertices[1].y - vertices[2].y);
-
-                        if (Math.abs(d1 - d2) < 20) {
-                            squares++;
-                        } else {
-                            rectangles++;
-                        }
+                        shapesDetected++;
                     }
 
                     approx.delete();
                 }
 
-                if (squares > 0 || rectangles > 0) {
+                if (shapesDetected > 0) {
                     const now = new Date();
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${now.toLocaleDateString()}</td>
                         <td>${now.toLocaleTimeString()}</td>
-                        <td>${squares > 0 ? 'Square' : 'Rectangle'}</td>
-                        <td>${squares + rectangles}</td>
+                        <td>Rectangle or Square</td>
+                        <td>${shapesDetected}</td>
                     `;
                     log.appendChild(row);
                 }
