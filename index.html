@@ -77,14 +77,18 @@
       const currentFrame = context.getImageData(0, 0, canvas.width, canvas.height);
       if (previousFrame) {
         let motionDetected = false;
+        let significantChanges = 0;
 
         for (let i = 0; i < currentFrame.data.length; i += 4) {
           const diff = Math.abs(currentFrame.data[i] - previousFrame.data[i]) +
                        Math.abs(currentFrame.data[i + 1] - previousFrame.data[i + 1]) +
                        Math.abs(currentFrame.data[i + 2] - previousFrame.data[i + 2]);
-          if (diff > 50) {
-            motionDetected = true;
-            break;
+          if (diff > 100) { // Increased sensitivity threshold
+            significantChanges++;
+            if (significantChanges > 5000) { // Minimum number of changes to consider as motion
+              motionDetected = true;
+              break;
+            }
           }
         }
 
